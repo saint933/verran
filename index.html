@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kigali Population Heatmap</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://leaflet.github.io/Leaflet.heat/dist/leaflet-heat.js"></script>
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { height: 100vh; width: 100%; }
+
+    #title {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      background: white;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    #legend {
+      position: absolute;
+      bottom: 30px;
+      right: 15px;
+      z-index: 1000;
+      background: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      min-width: 180px;
+    }
+
+    #legend h4 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      text-align: center;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 6px;
+    }
+
+    .legend-bar {
+      width: 100%;
+      height: 18px;
+      border-radius: 4px;
+      background: linear-gradient(to right, blue, cyan, lime, yellow, red);
+      margin-bottom: 4px;
+    }
+
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #555;
+      margin-bottom: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    #source {
+      position: absolute;
+      bottom: 30px;
+      left: 15px;
+      z-index: 1000;
+      background: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      color: #555;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Map Title -->
+  <div id="title">🗺️ Kigali City — Population Density Heatmap (2022 Census)</div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <h4>Population Density</h4>
+    <div class="legend-bar"></div>
+    <div class="legend-labels">
+      <span>Low</span>
+      <span>Medium</span>
+      <span>High</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:red;"></div>
+      <span>Very High Density</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:yellow;"></div>
+      <span>High Density</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:lime;"></div>
+      <span>Medium Density</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:cyan;"></div>
+      <span>Low-Medium Density</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:blue;"></div>
+      <span>Low Density</span>
+    </div>
+    <hr style="margin:8px 0; border-color:#eee;">
+    <small style="color:#888;">Intensity = Population / Area (km²)</small>
+  </div>
+
+  <!-- Data Source -->
+  <div id="source">📊 Source: NISR Rwanda Census 2022</div>
+  <script>
+
+    // Initialize map centered on Kigali
+    const map = L.map('map').setView([-1.9441, 30.0619], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Data: [latitude, longitude, population/area (density)]
+    const heatData = [
+      // Nyarugenge District
+      [-1.95341, 30.05507, 26668  / 9.54e-05],   // Gitega
+      [-1.91782, 30.00253, 31026  / 0.00196502],  // Kanyinya
+      [-1.97917, 30.01896, 61499  / 0.00238840],  // Kigali
+      [-1.95294, 30.04611, 56534  / 0.00026929],  // Kimisagara
+      [-2.04192, 30.03604, 59747  / 0.00444266],  // Mageregere
+      [-1.94122, 30.06093, 22531  / 0.00023928],  // Muhima
+      [-1.96952, 30.04505, 29580  / 0.00019707],  // Nyakabanda
+      [-1.99258, 30.04327, 55315  / 0.00071095],  // Nyamirambo
+      [-1.95682, 30.06428, 16665  / 0.00037607],  // Nyarugenge
+      [-1.97125, 30.05265, 14754  / 8.347e-05],   // Rwezamenyo
+
+      // Gasabo District
+      [-1.88784, 30.15591, 112899 / 0.00492605],  // Bumbogo
+      [-1.92204, 30.04228, 46262  / 0.00048953],  // Gatsata
+      [-1.87485, 30.22898, 19630  / 0.00284988],  // Gikomero
+      [-1.91777, 30.06129, 75611  / 0.00067502],  // Gisozi
+      [-1.86433, 30.06403, 63862  / 0.00295733],  // Jabana
+      [-1.88247, 30.01659, 41156  / 0.00303788],  // Jali
+      [-1.93761, 30.08047, 30036  / 0.00047019],  // Kacyiru
+      [-1.95429, 30.08831, 16425  / 0.00041225],  // Kimihurura
+      [-1.93836, 30.12423, 61733  / 0.00092124],  // Kimironko
+      [-1.90894, 30.09651, 125400 / 0.00196669],  // Kinyinya
+      [-1.93358, 30.18683, 95164  / 0.00409487],  // Ndera
+      [-1.85118, 30.11273, 68424  / 0.00378314],  // Nduba
+      [-1.94756, 30.10608, 38648  / 0.00059070],  // Remera
+      [-1.98214, 30.23632, 61787  / 0.00424574],  // Rusororo
+      [-1.82513, 30.17445, 22468  / 0.00347148],  // Rutunga
+
+      // Kicukiro District
+      [-2.03160, 30.10965, 79082  / 0.00298891],  // Gahanga
+      [-1.99817, 30.08289, 67084  / 0.00101128],  // Gatenga
+      [-1.97319, 30.07869, 19803  / 0.00027520],  // Gikondo
+      [-1.99774, 30.11340, 21277  / 0.00064983],  // Kagarama
+      [-1.99772, 30.14496, 72346  / 0.00186959],  // Kanombe
+      [-1.97181, 30.09716, 14039  / 0.00016649],  // Kicukiro
+      [-1.98752, 30.06459, 63153  / 0.00067977],  // Kigarama
+      [-2.02226, 30.20316, 78788  / 0.00428514],  // Masaka
+      [-1.97635, 30.11382, 26912  / 0.00040867],  // Niboye
+      [-1.97447, 30.15799, 49247  / 0.00124201],  // Nyarugunga
+    ];
+
+    // Normalize intensity for better visualization
+    const maxDensity = Math.max(...heatData.map(d => d[2]));
+    const normalizedData = heatData.map(d => [d[0], d[1], d[2] / maxDensity]);
+
+    L.heatLayer(normalizedData, {
+      radius: 40,
+      blur: 30,
+      maxZoom: 13,
+      max: 1.0,
+      gradient: {0.2: 'blue', 0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red'}
+    }).addTo(map);
+
+  </script>
+</body>
+</html>
